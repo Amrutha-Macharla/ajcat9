@@ -8,7 +8,7 @@ const DEFAULT_CIPHER = {
     "6": "F", "7": "G", "8": "H", "9": "I", "0": "0"
 };
 
-const DEFAULT_FIREBASE_URL = "https://ajcat8-default-rtdb.asia-southeast1.firebasedatabase.app";
+const DEFAULT_FIREBASE_URL = "https://ajcat9-30a77-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_WHATSAPP_NUMBER = "919492443916";
 const DEFAULT_CLOUDINARY_NAME = "df4dmpyg2";
 const DEFAULT_CLOUDINARY_PRESET = "asp catalogue";
@@ -16,7 +16,8 @@ const DEFAULT_CLOUDINARY_PRESET = "asp catalogue";
 // Auto-migrate legacy localStorage defaults
 if (localStorage.getItem('aj_firebase_url') === "https://ajcat5-default-rtdb.asia-southeast1.firebasedatabase.app" ||
     localStorage.getItem('aj_firebase_url') === "https://ajcat6-ed24d-default-rtdb.asia-southeast1.firebasedatabase.app" ||
-    localStorage.getItem('aj_firebase_url') === "https://ajcat7-ea9f2-default-rtdb.asia-southeast1.firebasedatabase.app") {
+    localStorage.getItem('aj_firebase_url') === "https://ajcat7-ea9f2-default-rtdb.asia-southeast1.firebasedatabase.app" ||
+    localStorage.getItem('aj_firebase_url') === "https://ajcat8-default-rtdb.asia-southeast1.firebasedatabase.app") {
     localStorage.setItem('aj_firebase_url', DEFAULT_FIREBASE_URL);
 }
 if (localStorage.getItem('aj_cloudinary_name') === "agc6iqec" ||
