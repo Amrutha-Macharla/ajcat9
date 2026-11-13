@@ -86,24 +86,25 @@ async function loadInitialData() {
         }
 
         // Sync strictly and completely from connected Firebase Realtime Database
+        let firebaseHasData = false;
         if (state.firebaseUrl) {
-            await trySyncFromFirebase();
+            firebaseHasData = await trySyncFromFirebase();
         }
 
         // If products or categories are empty (e.g. Firebase is brand new or offline), fallback to local SQLite
-        if (!state.products || state.products.length === 0) {
+        if (!firebaseHasData || !state.products || state.products.length === 0) {
             const prodsRes = await fetch('/api/products').then(r => r.json()).catch(() => ({ success: false }));
             if (prodsRes.success && prodsRes.products && prodsRes.products.length > 0) {
                 state.products = prodsRes.products;
             }
         }
-        if (!state.categories || state.categories.length === 0) {
+        if (!firebaseHasData || !state.categories || state.categories.length === 0) {
             const catsRes = await fetch('/api/categories').then(r => r.json()).catch(() => ({ success: false }));
             if (catsRes.success && catsRes.categories && catsRes.categories.length > 0) {
                 state.categories = catsRes.categories;
             }
         }
-        if (!state.rates || state.rates.length === 0) {
+        if (!firebaseHasData || !state.rates || state.rates.length === 0) {
             const ratesRes = await fetch('/api/rates').then(r => r.json()).catch(() => ({ success: false }));
             if (ratesRes.success && ratesRes.rates && ratesRes.rates.length > 0) {
                 state.rates = ratesRes.rates;
@@ -127,6 +128,11 @@ async function loadInitialData() {
         // Dynamically recalculate all product prices with current rates
         recalculateAllProductsInState();
 
+        // If Firebase was empty and local data exists, automatically sync data directly to Firebase!
+        if (state.firebaseUrl && !firebaseHasData && (state.products.length > 0 || state.categories.length > 0)) {
+            pushAllDataToFirebase();
+        }
+
         renderAll();
     } catch (err) {
         console.error("Failed to load data:", err);
@@ -134,7 +140,7 @@ async function loadInitialData() {
 }
 
 async function trySyncFromFirebase() {
-    if (!state.firebaseUrl) return;
+    if (!state.firebaseUrl) return false;
     const cleanUrl = state.firebaseUrl.replace(/\/+$/, '');
     try {
         const [fbRates, fbCats, fbProds, fbSettings] = await Promise.all([
@@ -144,20 +150,24 @@ async function trySyncFromFirebase() {
             fetch(`${cleanUrl}/settings.json`).then(r => r.json()).catch(() => null)
         ]);
 
+        let hasData = false;
+
         // PRODUCTS: Strictly and completely from Firebase
-        if (fbProds && typeof fbProds === 'object') {
+        if (fbProds && typeof fbProds === 'object' && Object.keys(fbProds).length > 0) {
             state.products = Array.isArray(fbProds)
                 ? fbProds.filter(Boolean)
                 : Object.entries(fbProds).map(([key, val]) => ({ ...val, id: val.id || key }));
+            if (state.products.length > 0) hasData = true;
         } else {
             state.products = [];
         }
 
         // CATEGORIES: Strictly from Firebase, or derived from Firebase products
-        if (fbCats && typeof fbCats === 'object') {
+        if (fbCats && typeof fbCats === 'object' && Object.keys(fbCats).length > 0) {
             state.categories = Array.isArray(fbCats)
                 ? fbCats.filter(Boolean)
                 : Object.entries(fbCats).map(([key, val]) => ({ ...val, id: val.id || key }));
+            if (state.categories.length > 0) hasData = true;
         } else {
             state.categories = [];
         }
@@ -180,7 +190,7 @@ async function trySyncFromFirebase() {
         }
 
         // RATES: From Firebase if present
-        if (fbRates && typeof fbRates === 'object') {
+        if (fbRates && typeof fbRates === 'object' && Object.keys(fbRates).length > 0) {
             const list = Array.isArray(fbRates)
                 ? fbRates.filter(Boolean)
                 : Object.entries(fbRates).map(([key, val]) => ({ ...val, id: val.id || key }));
@@ -196,8 +206,11 @@ async function trySyncFromFirebase() {
             if (fbSettings.cloudinary_name) state.cloudinaryName = fbSettings.cloudinary_name;
             if (fbSettings.cloudinary_preset) state.cloudinaryPreset = fbSettings.cloudinary_preset;
         }
+
+        return hasData;
     } catch (e) {
         console.warn("Firebase check:", e);
+        return false;
     }
 }
 
@@ -223,10 +236,9 @@ function recalculateAllProductsInState() {
     });
 }
 
-async function syncWithFirebaseNow() {
-    const cleanUrl = (document.getElementById('cloud-firebase-url')?.value || state.firebaseUrl).replace(/\/+$/, '');
-    const statusEl = document.getElementById('firebase-sync-status');
-    if (statusEl) statusEl.innerHTML = `<span class="text-amber-600 font-semibold">Syncing...</span>`;
+async function pushAllDataToFirebase() {
+    if (!state.firebaseUrl) return false;
+    const cleanUrl = state.firebaseUrl.replace(/\/+$/, '');
 
     recalculateAllProductsInState();
 
@@ -253,14 +265,22 @@ async function syncWithFirebaseNow() {
         const failed = responses.find(r => !r.ok);
         if (failed) {
             const errData = await failed.json().catch(() => ({}));
-            throw new Error(errData.error || `HTTP ${failed.status}`);
+            console.error("Direct Firebase sync error:", errData.error || `HTTP ${failed.status}`);
+            return false;
         }
 
-        if (statusEl) statusEl.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 inline"></i> <span class="text-emerald-700 font-bold">Synced Successfully!</span>`;
-        lucide.createIcons();
+        console.log("Direct Firebase sync completed successfully!");
+        return true;
     } catch (err) {
-        if (statusEl) statusEl.innerHTML = `<span class="text-rose-600 font-semibold">Sync failed: ${err.message}</span>`;
+        console.error("Direct Firebase sync failed:", err);
+        return false;
     }
+}
+
+window.syncDataDirectly = pushAllDataToFirebase;
+
+async function syncWithFirebaseNow() {
+    return await pushAllDataToFirebase();
 }
 
 function renderAll() {
@@ -270,20 +290,10 @@ function renderAll() {
     renderAdminProductsTable();
     populateCategoryDropdowns();
     renderCipherInputs();
-    populateCloudInputs();
     if (state.currentView === 'category') {
         renderCategoryShowcase();
     }
     lucide.createIcons();
-}
-
-function populateCloudInputs() {
-    if (document.getElementById('cloud-firebase-url')) document.getElementById('cloud-firebase-url').value = state.firebaseUrl;
-    if (document.getElementById('cloud-cloudinary-name')) document.getElementById('cloud-cloudinary-name').value = state.cloudinaryName;
-    if (document.getElementById('cloud-cloudinary-preset')) document.getElementById('cloud-cloudinary-preset').value = state.cloudinaryPreset;
-    if (document.getElementById('cloud-cloudinary-key')) document.getElementById('cloud-cloudinary-key').value = state.cloudinaryKey;
-    if (document.getElementById('cloud-whatsapp-number')) document.getElementById('cloud-whatsapp-number').value = state.whatsappNumber;
-    if (document.getElementById('cloud-estimation-pin')) document.getElementById('cloud-estimation-pin').value = state.estimationPin || DEFAULT_ESTIMATION_PIN;
 }
 
 // ==========================================
@@ -1533,53 +1543,6 @@ async function handleSaveCipher(e) {
 function resetDefaultCipher() {
     state.cipher = { ...DEFAULT_CIPHER };
     renderCipherInputs();
-}
-
-// ==========================================
-// CLOUD SETTINGS ACTION (Firebase & Cloudinary)
-// ==========================================
-async function handleSaveCloudSettings(e) {
-    e.preventDefault();
-    const firebaseUrl = document.getElementById('cloud-firebase-url').value.trim();
-    const cloudinaryName = document.getElementById('cloud-cloudinary-name').value.trim();
-    const cloudinaryPreset = document.getElementById('cloud-cloudinary-preset').value.trim();
-    const cloudinaryKey = document.getElementById('cloud-cloudinary-key').value.trim();
-    const whatsappNumber = document.getElementById('cloud-whatsapp-number').value.trim();
-    const estimationPin = document.getElementById('cloud-estimation-pin') ? document.getElementById('cloud-estimation-pin').value.trim() : (state.estimationPin || DEFAULT_ESTIMATION_PIN);
-
-    state.firebaseUrl = firebaseUrl;
-    state.cloudinaryName = cloudinaryName;
-    state.cloudinaryPreset = cloudinaryPreset;
-    state.cloudinaryKey = cloudinaryKey;
-    state.whatsappNumber = whatsappNumber;
-    state.estimationPin = estimationPin;
-
-    localStorage.setItem('aj_firebase_url', firebaseUrl);
-    localStorage.setItem('aj_cloudinary_name', cloudinaryName);
-    localStorage.setItem('aj_cloudinary_preset', cloudinaryPreset);
-    localStorage.setItem('aj_cloudinary_key', cloudinaryKey);
-    localStorage.setItem('aj_whatsapp_number', whatsappNumber);
-    localStorage.setItem('aj_estimation_pin', estimationPin);
-
-    try {
-        await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                firebase_url: firebaseUrl,
-                cloudinary_name: cloudinaryName,
-                cloudinary_preset: cloudinaryPreset,
-                cloudinary_key: cloudinaryKey,
-                whatsapp_number: whatsappNumber,
-                estimation_pin: estimationPin
-            })
-        });
-    } catch (err) {}
-
-    await trySyncFromFirebase();
-    renderAll();
-    closeModal('cloud-modal');
-    alert("Cloud settings saved and connected to Firebase!");
 }
 
 // ==========================================
