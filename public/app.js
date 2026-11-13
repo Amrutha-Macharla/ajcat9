@@ -86,25 +86,21 @@ async function loadInitialData() {
         }
 
         // Sync strictly and completely from connected Firebase Realtime Database
-        let firebaseHasData = false;
+        let firebaseConnected = false;
         if (state.firebaseUrl) {
-            firebaseHasData = await trySyncFromFirebase();
+            firebaseConnected = await trySyncFromFirebase();
         }
 
-        // If products or categories are empty (e.g. Firebase is brand new or offline), fallback to local SQLite
-        if (!firebaseHasData || !state.products || state.products.length === 0) {
+        // Only fall back to local SQLite if Firebase is NOT configured or failed to connect
+        if (!firebaseConnected) {
             const prodsRes = await fetch('/api/products').then(r => r.json()).catch(() => ({ success: false }));
             if (prodsRes.success && prodsRes.products && prodsRes.products.length > 0) {
                 state.products = prodsRes.products;
             }
-        }
-        if (!firebaseHasData || !state.categories || state.categories.length === 0) {
             const catsRes = await fetch('/api/categories').then(r => r.json()).catch(() => ({ success: false }));
             if (catsRes.success && catsRes.categories && catsRes.categories.length > 0) {
                 state.categories = catsRes.categories;
             }
-        }
-        if (!firebaseHasData || !state.rates || state.rates.length === 0) {
             const ratesRes = await fetch('/api/rates').then(r => r.json()).catch(() => ({ success: false }));
             if (ratesRes.success && ratesRes.rates && ratesRes.rates.length > 0) {
                 state.rates = ratesRes.rates;
@@ -138,31 +134,37 @@ async function trySyncFromFirebase() {
     if (!state.firebaseUrl) return false;
     const cleanUrl = state.firebaseUrl.replace(/\/+$/, '');
     try {
-        const [fbRates, fbCats, fbProds, fbSettings] = await Promise.all([
-            fetch(`${cleanUrl}/rates.json`).then(r => r.json()).catch(() => null),
-            fetch(`${cleanUrl}/categories.json`).then(r => r.json()).catch(() => null),
-            fetch(`${cleanUrl}/products.json`).then(r => r.json()).catch(() => null),
-            fetch(`${cleanUrl}/settings.json`).then(r => r.json()).catch(() => null)
+        const [fbRatesRes, fbCatsRes, fbProdsRes, fbSettingsRes] = await Promise.all([
+            fetch(`${cleanUrl}/rates.json`).catch(() => null),
+            fetch(`${cleanUrl}/categories.json`).catch(() => null),
+            fetch(`${cleanUrl}/products.json`).catch(() => null),
+            fetch(`${cleanUrl}/settings.json`).catch(() => null)
         ]);
 
-        let hasData = false;
+        if (!fbProdsRes && !fbCatsRes) return false;
+        if ((fbProdsRes && !fbProdsRes.ok) || (fbCatsRes && !fbCatsRes.ok)) return false;
+
+        const [fbRates, fbCats, fbProds, fbSettings] = await Promise.all([
+            fbRatesRes ? fbRatesRes.json().catch(() => null) : null,
+            fbCatsRes ? fbCatsRes.json().catch(() => null) : null,
+            fbProdsRes ? fbProdsRes.json().catch(() => null) : null,
+            fbSettingsRes ? fbSettingsRes.json().catch(() => null) : null
+        ]);
 
         // PRODUCTS: Strictly and completely from Firebase
-        if (fbProds && typeof fbProds === 'object' && Object.keys(fbProds).length > 0) {
+        if (fbProds && typeof fbProds === 'object') {
             state.products = Array.isArray(fbProds)
                 ? fbProds.filter(Boolean)
                 : Object.entries(fbProds).map(([key, val]) => ({ ...val, id: val.id || key }));
-            if (state.products.length > 0) hasData = true;
         } else {
             state.products = [];
         }
 
         // CATEGORIES: Strictly from Firebase, or derived from Firebase products
-        if (fbCats && typeof fbCats === 'object' && Object.keys(fbCats).length > 0) {
+        if (fbCats && typeof fbCats === 'object') {
             state.categories = Array.isArray(fbCats)
                 ? fbCats.filter(Boolean)
                 : Object.entries(fbCats).map(([key, val]) => ({ ...val, id: val.id || key }));
-            if (state.categories.length > 0) hasData = true;
         } else {
             state.categories = [];
         }
