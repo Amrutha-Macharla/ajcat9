@@ -302,7 +302,8 @@ class CatalogueHTTPHandler(BaseHTTPRequestHandler):
 
         # Uploaded files
         if path.startswith('/uploads/'):
-            filename = os.path.basename(path)
+            from urllib.parse import unquote
+            filename = os.path.basename(unquote(path))
             file_path = os.path.join(UPLOADS_DIR, filename)
             if os.path.exists(file_path):
                 mime, _ = mimetypes.guess_type(file_path)
