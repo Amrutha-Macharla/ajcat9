@@ -238,7 +238,7 @@ async function syncWithFirebaseNow() {
         const prodsObj = {};
         state.products.forEach(p => prodsObj[p.id] = p);
 
-        await Promise.all([
+        const responses = await Promise.all([
             fetch(`${cleanUrl}/rates.json`, { method: 'PUT', body: JSON.stringify(ratesObj) }),
             fetch(`${cleanUrl}/categories.json`, { method: 'PUT', body: JSON.stringify(catsObj) }),
             fetch(`${cleanUrl}/products.json`, { method: 'PUT', body: JSON.stringify(prodsObj) }),
@@ -250,10 +250,16 @@ async function syncWithFirebaseNow() {
             }) })
         ]);
 
+        const failed = responses.find(r => !r.ok);
+        if (failed) {
+            const errData = await failed.json().catch(() => ({}));
+            throw new Error(errData.error || `HTTP ${failed.status}`);
+        }
+
         if (statusEl) statusEl.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 inline"></i> <span class="text-emerald-700 font-bold">Synced Successfully!</span>`;
         lucide.createIcons();
     } catch (err) {
-        if (statusEl) statusEl.innerHTML = `<span class="text-rose-600 font-semibold">Sync failed</span>`;
+        if (statusEl) statusEl.innerHTML = `<span class="text-rose-600 font-semibold">Sync failed: ${err.message}</span>`;
     }
 }
 
