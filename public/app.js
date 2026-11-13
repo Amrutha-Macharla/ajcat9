@@ -128,11 +128,6 @@ async function loadInitialData() {
         // Dynamically recalculate all product prices with current rates
         recalculateAllProductsInState();
 
-        // If Firebase was empty and local data exists, automatically sync data directly to Firebase!
-        if (state.firebaseUrl && !firebaseHasData && (state.products.length > 0 || state.categories.length > 0)) {
-            pushAllDataToFirebase();
-        }
-
         renderAll();
     } catch (err) {
         console.error("Failed to load data:", err);
