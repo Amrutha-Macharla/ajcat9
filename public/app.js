@@ -20,9 +20,7 @@ if (localStorage.getItem('aj_firebase_url') === "https://ajcat5-default-rtdb.asi
     localStorage.getItem('aj_firebase_url') === "https://ajcat8-default-rtdb.asia-southeast1.firebasedatabase.app") {
     localStorage.setItem('aj_firebase_url', DEFAULT_FIREBASE_URL);
 }
-if (localStorage.getItem('aj_cloudinary_name') === "agc6iqec" ||
-    localStorage.getItem('aj_cloudinary_name') === "wzuhkcid" ||
-    localStorage.getItem('aj_cloudinary_name') === "do2kiuqp4") {
+if (localStorage.getItem('aj_cloudinary_name') !== DEFAULT_CLOUDINARY_NAME) {
     localStorage.setItem('aj_cloudinary_name', DEFAULT_CLOUDINARY_NAME);
 }
 if (localStorage.getItem('aj_cloudinary_preset') === "ajcat5" ||
