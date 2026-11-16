@@ -640,9 +640,9 @@ function renderCategoryShowcase() {
 
                 return `
                     <div class="product-card bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 flex flex-col">
-                        <!-- Edge-to-Edge Image with 0 margin/padding fully fitting dimensions -->
-                        <div class="relative w-full aspect-square sm:aspect-[4/5] bg-slate-950 overflow-hidden cursor-pointer group flex items-center justify-center" onclick="openFullscreenProduct('${p.code}')" title="Click for Full Screen">
-                            <img src="${img}" alt="${p.code}" class="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300">
+                        <!-- Edge-to-Edge Image adapting dynamically to uploaded dimensions without cropping -->
+                        <div class="relative w-full bg-slate-900/5 overflow-hidden cursor-pointer group flex items-center justify-center" onclick="openFullscreenProduct('${p.code}')" title="Click for Full Screen">
+                            <img src="${img}" alt="${p.code}" class="w-full h-auto max-h-[85vh] object-contain block group-hover:scale-102 transition-transform duration-300">
                             <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                                 <i data-lucide="maximize" class="w-7 h-7"></i>
                             </div>
@@ -914,7 +914,7 @@ function renderAdminProductsTable() {
         return `
             <tr>
                 <td>
-                    <img src="${img}" alt="${p.code}" onclick="openFullscreenProduct('${p.code}')" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200 cursor-pointer">
+                    <img src="${img}" alt="${p.code}" onclick="openFullscreenProduct('${p.code}')" class="w-12 h-12 rounded-xl object-contain bg-slate-100 border border-slate-200 cursor-pointer p-0.5">
                 </td>
                 <td class="font-black text-brand-600 font-mono text-base">${p.code}</td>
                 <td class="text-slate-700 text-sm font-semibold">${p.category_name}</td>

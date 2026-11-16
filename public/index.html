@@ -441,7 +441,7 @@
                     </div>
                     <div class="flex items-start gap-4">
                         <div id="prod-img-preview-box" class="w-24 h-24 rounded-2xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center overflow-hidden shrink-0 relative">
-                            <img id="prod-img-preview" src="" class="w-full h-full object-cover hidden">
+                            <img id="prod-img-preview" src="" class="w-full h-full object-contain hidden">
                             <i id="prod-img-placeholder" data-lucide="image" class="w-8 h-8 text-slate-400"></i>
                             <div id="prod-img-spinner" class="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex items-center justify-center hidden">
                                 <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
@@ -539,9 +539,9 @@
 
             <!-- Modal Body (Image + Details) -->
             <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <!-- Large Image (Edge-to-Edge) -->
-                <div class="rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[60vh] aspect-square shadow-inner">
-                    <img id="lightbox-img" src="" class="max-h-[60vh] w-full object-contain">
+                <!-- Large Image (Adapting dynamically to uploaded dimensions) -->
+                <div class="rounded-2xl overflow-hidden bg-slate-900/40 flex items-center justify-center max-h-[75vh] shadow-inner p-2">
+                    <img id="lightbox-img" src="" class="max-h-[75vh] w-auto max-w-full object-contain rounded-xl">
                 </div>
 
                 <!-- Product Details Box -->
