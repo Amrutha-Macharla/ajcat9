@@ -10,7 +10,7 @@ const DEFAULT_CIPHER = {
 
 const DEFAULT_FIREBASE_URL = "https://ajcat9-30a77-default-rtdb.asia-southeast1.firebasedatabase.app";
 const DEFAULT_WHATSAPP_NUMBER = "919492443916";
-const DEFAULT_CLOUDINARY_NAME = "df4dmpyg2";
+const DEFAULT_CLOUDINARY_NAME = "drkyyjigv";
 const DEFAULT_CLOUDINARY_PRESET = "asp catalogue";
 
 // Auto-migrate legacy localStorage defaults
