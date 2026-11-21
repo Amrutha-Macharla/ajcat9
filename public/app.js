@@ -40,6 +40,15 @@ const DEFAULT_PRODUCTS = [];
 
 const DEFAULT_ESTIMATION_PIN = "5473";
 
+function sortProductsAscending(products) {
+    if (!Array.isArray(products)) return [];
+    return products.sort((a, b) => {
+        const codeA = (a && (a.code || a.id)) ? String(a.code || a.id) : '';
+        const codeB = (b && (b.code || b.id)) ? String(b.code || b.id) : '';
+        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+}
+
 const state = {
     categories: [],
     products: [],
@@ -92,7 +101,7 @@ async function loadInitialData() {
         if (!firebaseConnected) {
             const prodsRes = await fetch('/api/products').then(r => r.json()).catch(() => ({ success: false }));
             if (prodsRes.success && prodsRes.products && prodsRes.products.length > 0) {
-                state.products = prodsRes.products;
+                state.products = sortProductsAscending(prodsRes.products);
             }
             const catsRes = await fetch('/api/categories').then(r => r.json()).catch(() => ({ success: false }));
             if (catsRes.success && catsRes.categories && catsRes.categories.length > 0) {
@@ -120,6 +129,7 @@ async function loadInitialData() {
 
         // Dynamically recalculate all product prices with current rates
         recalculateAllProductsInState();
+        sortProductsAscending(state.products);
 
         renderAll();
     } catch (err) {
@@ -153,6 +163,7 @@ async function trySyncFromFirebase() {
             state.products = Array.isArray(fbProds)
                 ? fbProds.filter(Boolean)
                 : Object.entries(fbProds).map(([key, val]) => ({ ...val, id: val.id || key }));
+            sortProductsAscending(state.products);
         } else {
             state.products = [];
         }
@@ -612,6 +623,7 @@ function renderCategoryShowcase() {
         if (!searchVal) return true;
         return p.code.toLowerCase().includes(searchVal) || (p.notes && p.notes.toLowerCase().includes(searchVal));
     });
+    sortProductsAscending(filtered);
 
     if (filtered.length === 0) {
         container.innerHTML = '';
@@ -901,6 +913,7 @@ function renderAdminProductsTable() {
         const matchCat = !catFilter || p.category_id === catFilter;
         return matchSearch && matchCat;
     });
+    sortProductsAscending(filtered);
 
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13" class="text-center py-10 text-sm text-slate-400 font-medium">No products found matching filters</td></tr>`;
@@ -1311,13 +1324,14 @@ async function handleSaveProduct(e) {
             image_url
         };
 
-        // Update state directly
+        // Update state directly and keep ascending order
         const existingIdx = state.products.findIndex(p => p.id === prodId);
         if (existingIdx >= 0) {
             state.products[existingIdx] = payload;
         } else {
-            state.products.unshift(payload);
+            state.products.push(payload);
         }
+        sortProductsAscending(state.products);
 
         // Save to local server
         try {
